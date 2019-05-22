@@ -34,20 +34,29 @@ Basics
     This is useful to harden flows that allow multiple response types 
     (e.g. by disallowing a hybrid flow client that is supposed to use `code id_token` to add the `token` response type 
     and thus leaking the token to the browser.
+``Properties``
+    Dictionary to hold any custom client-specific values as needed.
 
 Authentication/Logout
 ^^^^^^^^^^^^^^^^^^^^^
 
 ``PostLogoutRedirectUris``
     Specifies allowed URIs to redirect to after logout. See the `OIDC Connect Session Management spec <https://openid.net/specs/openid-connect-session-1_0.html>`_ for more details.
-``LogoutUri``
-    Specifies logout URI at client for HTTP based logout. See the `OIDC Front-Channel spec <https://openid.net/specs/openid-connect-frontchannel-1_0.html>`_ for more details.
-``LogoutSessionRequired``
-    Specifies if the user's session id should be sent to the LogoutUri. Defaults to true.
+``FrontChannelLogoutUri``
+    Specifies logout URI at client for HTTP based front-channel logout. See the `OIDC Front-Channel spec <https://openid.net/specs/openid-connect-frontchannel-1_0.html>`_ for more details.
+``FrontChannelLogoutSessionRequired``
+    Specifies if the user's session id should be sent to the FrontChannelLogoutUri. Defaults to true.
+``BackChannelLogoutUri``
+    Specifies logout URI at client for HTTP based back-channel logout. See the `OIDC Back-Channel spec <https://openid.net/specs/openid-connect-backchannel-1_0.html>`_ for more details.
+``BackChannelLogoutSessionRequired``
+    Specifies if the user's session id should be sent in the request to the BackChannelLogoutUri. Defaults to true.
 ``EnableLocalLogin``
     Specifies if this client can use local accounts, or external IdPs only. Defaults to `true`.
 ``IdentityProviderRestrictions``
     Specifies which external IdPs can be used with this client (if list is empty all IdPs are allowed). Defaults to empty.
+``UserSsoLifetime`` `added in 2.3`
+    The maximum duration (in seconds) since the last time the user authenticated. Defaults to ``null``.
+    You can adjust the lifetime of a session token to control when and how often a user is required to reenter credentials instead of being silently authenticated, when using a web application.
 
 Token
 ^^^^^
@@ -65,7 +74,7 @@ Token
 ``RefreshTokenUsage``
     ``ReUse`` the refresh token handle will stay the same when refreshing tokens
     
-    ``OneTime`` the refresh token handle will be updated when refreshing tokens
+    ``OneTime`` the refresh token handle will be updated when refreshing tokens. This is the default.
 ``RefreshTokenExpiration``
     ``Absolute`` the refresh token will expire on a fixed point in time (specified by the AbsoluteRefreshTokenLifetime)
     
@@ -82,8 +91,12 @@ Token
     Allows settings claims for the client (will be included in the access token).
 ``AlwaysSendClientClaims``
     If set, the client claims will be sent for every flow. If not, only for client credentials flow (default is `false`)
-``PrefixClientClaims``
-    If set, all client claims will be prefixed with `client_` to make sure they don't accidentally collide with user claims. Default is `true`.
+``AlwaysIncludeUserClaimsInIdToken``
+    When requesting both an id token and access token, should the user claims always be added to the id token instead of requring the client to use the userinfo endpoint. Default is `false`.
+``ClientClaimsPrefix``
+    If set, the prefix client claim types will be prefixed with. Defaults to `client_`. The intent is to make sure they don't accidentally collide with user claims.
+``PairWiseSubjectSalt``
+    Salt value used in pair-wise subjectId generation for users of this client.
 
 Consent Screen
 ^^^^^^^^^^^^^^
@@ -92,9 +105,19 @@ Consent Screen
     Specifies whether a consent screen is required. Defaults to `true`.
 ``AllowRememberConsent``
     Specifies whether user can choose to store consent decisions. Defaults to `true`.
+``ConsentLifetime``
+    Lifetime of a user consent in seconds. Defaults to null (no expiration).
 ``ClientName``
     Client display name (used for logging and consent screen)
 ``ClientUri``
     URI to further information about client (used on consent screen)
 ``LogoUri``
     URI to client logo (used on consent screen)
+
+Device flow
+^^^^^^^^^^^
+
+``UserCodeType``
+    Specifies the type of user code to use for the client. Otherwise falls back to default.
+``DeviceCodeLifetime``
+    Lifetime to device code in seconds (defaults to 300 seconds / 5 minutes)

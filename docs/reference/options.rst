@@ -6,11 +6,17 @@ IdentityServer Options
     Set the issuer name that will appear in the discovery document and the issued JWT tokens.
     It is recommended to not set this property, which infers the issuer name from the host name that is used by the clients.
 
+* ``PublicOrigin``
+    The origin of this server instance, e.g. https://myorigin.com. If not set, the origin name is inferred from the request.
+
 Endpoints
 ^^^^^^^^^
 Allows enabling/disabling individual endpoints, e.g. token, authorize, userinfo etc.
 
-By default all endpoints are enabled, but you can lock down your server by disbling endpoint that you don't need.
+By default all endpoints are enabled, but you can lock down your server by disabling endpoint that you don't need.
+
+* ``EnableJwtRequestUri``
+    JWT request_uri processing is enabled on the authorize endpoint. Defaults to ``false``.
 
 Discovery
 ^^^^^^^^^
@@ -20,18 +26,20 @@ The ``CustomEntries`` dictionary allows adding custom elements to the discovery 
 
 Authentication
 ^^^^^^^^^^^^^^
-* ``AuthenticationScheme``
-    If set, specifies the cookie middleware you want to use. If not set, IdentityServer will use a built-in cookie middleware with default values.
+* ``CookieLifetime``
+    The authentication cookie lifetime (only effective if the IdentityServer-provided cookie handler is used).
+
+* ``CookieSlidingExpiration``
+    Specified if the cookie should be sliding or not (only effective if the IdentityServer-provided cookie handler is used).
 
 * ``RequireAuthenticatedUserForSignOutMessage``
-    Indicates if user must be authenticated to accept parameters to end session endpoint. Defaults to ``false``.
+    Indicates if user must be authenticated to accept parameters to end session endpoint. Defaults to false.
 
-* ``FederatedSignOutPaths``
-    Collection of paths that match ``SignedOutCallbackPath`` on any middleware being used to support external identity providers (such as AzureAD, or ADFS).
-    ``SignedOutCallbackPath`` is used as the "signout cleanup" endpoint called from upstream identity providers when the user signs out of that upstream provider.
-    This ``SignedOutCallbackPath`` is typically invoked in an ``<iframe>`` from the upstream identity provider, and is intended to sign the user out of the application. 
-    Given that IdentityServer should notify all of its client applications when a user signs out, IdentityServer must extend the behavior at these ``SignedOutCallbackPath`` endpoints to sign the user our of any client applictions of IdentityServer.
+* ``CheckSessionCookieName``
+    The name of the cookie used for the check session endpoint.
 
+* ``RequireCspFrameSrcForSignout``
+    If set, will require frame-src CSP headers being emitting on the end session callback endpoint which renders iframes to clients for front-channel signout notification. Defaults to true.
 
 Events
 ^^^^^^
@@ -44,8 +52,8 @@ Allows setting length restrictions on various protocol parameters like client id
 UserInteraction
 ^^^^^^^^^^^^^^^
 
-* ``LoginUrl``, ``LogoutUrl``, ``ConsentUrl``, ``ErrorUrl``
-    Sets the the URLs for the login, logout, consent and error pages.
+* ``LoginUrl``, ``LogoutUrl``, ``ConsentUrl``, ``ErrorUrl``, ``DeviceVerificationUrl``
+    Sets the URLs for the login, logout, consent, error and device verification pages.
 * ``LoginReturnUrlParameter``
     Sets the name of the return URL parameter passed to the login page. Defaults to *returnUrl*.
 * ``LogoutIdParameter``
@@ -56,6 +64,8 @@ UserInteraction
     Sets the name of the error message id parameter passed to the error page. Defaults to *errorId*.
 * ``CustomRedirectReturnUrlParameter``
     Sets the name of the return URL parameter passed to a custom redirect from the authorization endpoint. Defaults to *returnUrl*.
+* ``DeviceVerificationUserCodeParameter``
+    Sets the name of the user code parameter passed to the device verification page. Defaults to *userCode*.
 * ``CookieMessageThreshold``
     Certain interactions between IdentityServer and some UI pages require a cookie to pass state and context (any of the pages above that have a configurable "message id" parameter).
     Since browsers have limits on the number of cookies and their size, this setting is used to prevent too many cookies being created. 
@@ -90,3 +100,29 @@ The underlying CORS implementation is provided from ASP.NET Core, and as such it
 * ``PreflightCacheDuration``
     `Nullable<TimeSpan>` indicating the value to be used in the preflight `Access-Control-Max-Age` response header.
     Defaults to `null` indicating no caching header is set on the response.
+
+CSP (Content Security Policy)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+IdentityServer emits CSP headers for some responses, where appropriate.
+
+* ``Level``
+    The level of CSP to use. CSP Level 2 is used by default, but if older browsers must be supported then this be changed to ``CspLevel.One`` to accomodate them.
+
+* ``AddDeprecatedHeader``
+    Indicates if the older ``X-Content-Security-Policy`` CSP header should also be emitted (in addition to the standards-based header value). Defaults to true.
+
+Device Flow
+^^^^^^^^^^^
+
+* ``DefaultUserCodeType``
+    The user code type to use, unless set at the client level. Defaults to *Numeric*, a 9-digit code.
+* ``Interval``
+    Defines the minimum allowed polling interval on the token endpoint. Defaults to *5*.
+
+Mutual TLS
+^^^^^^^^^^
+
+* ``Enabled``
+    Specifies if MTLS support should be enabled. Defaults to ``false``.
+* ``ClientCertificateAuthenticationScheme``
+    Specifies the name of the authentication handler for X.509 client certificates. Defaults to ``"Certificate"``.

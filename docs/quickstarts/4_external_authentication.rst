@@ -2,11 +2,13 @@
 Adding Support for External Authentication
 ==========================================
 
+.. note:: For any pre-requisites (like e.g. templates) have a look at the :ref:`overview <refQuickstartOverview>` first.
+
 Next we will add support for external authentication.
-This is really easy, because all you really need is an ASP.NET Core compatible authentication middleware.
+This is really easy, because all you really need is an ASP.NET Core compatible authentication handler.
 
 ASP.NET Core itself ships with support for Google, Facebook, Twitter, Microsoft Account and OpenID Connect.
-In Addition you can find providers for many other authentication provider `here <https://github.com/aspnet-contrib/AspNet.Security.OAuth.Providers>`_.
+In addition you can find implementations for many other authentication providers `here <https://github.com/aspnet-contrib/AspNet.Security.OAuth.Providers>`_.
 
 Adding Google support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -15,65 +17,60 @@ This is done at their developer `console <https://console.developers.google.com/
 Create a new project, enable the Google+ API and configure the callback address of your
 local IdentityServer by adding the */signin-google* path to your base-address (e.g. http://localhost:5000/signin-google).
 
-If you are running on port 5000 - you can simply use the client id/secret from the code snippet
-below, since this is pre-registered by us.
+The developer console will show you a client ID and secret issued by Google - you will need that in the next step.
 
-Start by adding the Google authentication middleware nuget to your project (``Microsoft.AspNetCore.Authentication.Google``).
+Add the Google authentication handler to the DI of the IdentityServer host.
+This is done by adding this snippet to ``ConfigureServices`` in ``Startup``::
 
-Next we need to add the middleware to the pipeline.
-Order is important, the additional authentication middleware must run **after**
-IdentityServer but **before** MVC.
+    services.AddAuthentication()
+        .AddGoogle("Google", options =>
+        {
+            options.SignInScheme = IdentityServerConstants.ExternalCookieAuthenticationScheme;
 
-By default, we wire up a cookie middleware behind the scenes, so that the external authentication can
-store its outcome. You simply need to add the external authentication middleware to the pipeline and make it use
-the ``IdentityServerConstants.ExternalCookieAuthenticationScheme`` sign-in scheme::
-
-    app.UseGoogleAuthentication(new GoogleOptions
-    {
-        AuthenticationScheme = "Google",
-        DisplayName = "Google",
-        SignInScheme = IdentityServerConstants.ExternalCookieAuthenticationScheme,
-
-        ClientId = "434483408261-55tc8n0cs4ff1fe21ea8df2o443v2iuc.apps.googleusercontent.com",
-        ClientSecret = "3gcoTrEDPPJ0ukn_aYYT6PWo"
-    });
-
-.. note:: When using external authentication with ASP.NET Core Identity, the ``SignInScheme`` must be set to ``"Identity.External"`` instead of ``IdentityServerConstants.ExternalCookieAuthenticationScheme``.
+            options.ClientId = "<insert here>";
+            options.ClientSecret = "<insert here>";
+        });
+    
+By default, IdentityServer configures a cookie handler specifically for the results of external authentication (with the scheme based on the constant ``IdentityServerConstants.ExternalCookieAuthenticationScheme``).
+The configuration for the Google handler is then using that cookie handler.
 
 Now run the MVC client and try to authenticate - you will see a Google button on the login page:
 
 .. image:: images/4_login_page.png
 
-After authentication, you can see that the claims are now being sourced from Google data.
-
-.. image:: images/4_external_claims.png
+After authentication with the MVC client, you can see that the claims are now being sourced from Google data.
 
 Further experiments
 ^^^^^^^^^^^^^^^^^^^
 You can add an additional external provider.
-We have a cloud-hosted demo version of IdentityServer4 which you can integrate using OpenID Connect.
+We have a `cloud-hosted demo <https://demo.identityserver.io>`_ version of IdentityServer4 which you can integrate using OpenID Connect.
 
-First add the `Microsoft.AspNetCore.Authentication.OpenIdConnect` NuGet package to your project.
+Add the OpenId Connect handler to DI::
 
-.. image:: images/4_nuget_oidc.png
-
-Next add the middleware::
-
-    // middleware for external openid connect authentication
-    app.UseOpenIdConnectAuthentication(new OpenIdConnectOptions
-    {
-        SignInScheme = IdentityServerConstants.ExternalCookieAuthenticationScheme,
-        SignOutScheme = IdentityServerConstants.SignoutScheme,
-
-        DisplayName = "OpenID Connect",
-        Authority = "https://demo.identityserver.io/",
-        ClientId = "implicit",
-
-        TokenValidationParameters = new TokenValidationParameters
+    services.AddAuthentication()
+        .AddGoogle("Google", options =>
         {
-            NameClaimType = "name",
-            RoleClaimType = "role"
-        }
-    });
+            options.SignInScheme = IdentityServerConstants.ExternalCookieAuthenticationScheme;
 
-.. note:: The quickstart UI auto-provisions external users. IOW - if an external user logs in for the first time, a new local user is created, all the external claims are copied over and associated with the new user. The way you deal with such a situation is completely up to you though. Maybe you want to show some sort of registration UI first. The source code for the default quickstart can be found `here <https://github.com/IdentityServer/IdentityServer4/blob/dev/src/Host/Quickstart/Account/AccountService.cs>`_.
+            options.ClientId = "<insert here>";
+            options.ClientSecret = "<insert here>";
+        })
+        .AddOpenIdConnect("oidc", "OpenID Connect", options =>
+        {
+            options.SignInScheme = IdentityServerConstants.ExternalCookieAuthenticationScheme;
+            options.SignOutScheme = IdentityServerConstants.SignoutScheme;
+            options.SaveTokens = true;
+
+            options.Authority = "https://demo.identityserver.io/";
+            options.ClientId = "implicit";
+
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                NameClaimType = "name",
+                RoleClaimType = "role"
+            };
+        });
+
+And now a user should be able to use the cloud-hosted demo identity provider.
+
+.. note:: The quickstart UI auto-provisions external users. As an external user logs in for the first time, a new local user is created, and all the external claims are copied over and associated with the new user. The way you deal with such a situation is completely up to you though. Maybe you want to show some sort of registration UI first. The source code for the default quickstart can be found `here <https://github.com/IdentityServer/IdentityServer4.Quickstart.UI>`_. The controller where auto-provisioning is executed can be found `here <https://github.com/IdentityServer/IdentityServer4.Quickstart.UI/blob/master/Quickstart/Account/ExternalController.cs>`_.

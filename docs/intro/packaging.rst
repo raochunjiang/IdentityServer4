@@ -16,18 +16,18 @@ Quickstart UI
 
 Contains a simple starter UI including login, logout and consent pages.
 
-Access token validation middleware
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Access token validation handler
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 `nuget <https://www.nuget.org/packages/IdentityServer4.AccessTokenValidation>`_ | `github <https://github.com/IdentityServer/IdentityServer4.AccessTokenValidation>`_
 
-ASP.NET Core middleware for validating tokens in APIs. Provides an easy way to validate access tokens (both JWT and reference) and enforce scope requirements.
+ASP.NET Core authentication handler for validating tokens in APIs. The handler allows supporting both JWT and reference tokens in the same API.
 
 ASP.NET Core Identity
 ^^^^^^^^^^^^^^^^^^^^^
 `nuget <https://www.nuget.org/packages/IdentityServer4.AspNetIdentity>`_ | `github <https://github.com/IdentityServer/IdentityServer4.AspNetIdentity>`_
 
 ASP.NET Core Identity integration package for IdentityServer. 
-This package provides a simple configuration API to use the ASP.NET Identity managament library for your IdentityServer users.
+This package provides a simple configuration API to use the ASP.NET Identity management library for your IdentityServer users.
 
 EntityFramework Core
 ^^^^^^^^^^^^^^^^^^^^

@@ -2,11 +2,13 @@
 Switching to Hybrid Flow and adding API Access back
 ===================================================
 
+.. note:: For any pre-requisites (like e.g. templates) have a look at the :ref:`overview <refQuickstartOverview>` first.
+
 In the previous quickstarts we explored both API access and user authentication.
 Now we want to bring the two parts together.
 
 The beauty of the OpenID Connect & OAuth 2.0 combination is, that you can achieve both with
-a single protocol and a single round-trip to the token service.
+a single protocol and a single exchange with the token service.
 
 In the previous quickstart we used the OpenID Connect implicit flow.
 In the implicit flow all tokens are transmitted via the browser, which is totally fine for the identity token.
@@ -32,7 +34,7 @@ this allows requesting refresh tokens for long lived API access::
     {
         ClientId = "mvc",
         ClientName = "MVC Client",
-        AllowedGrantTypes = GrantTypes.HybridAndClientCredentials,
+        AllowedGrantTypes = GrantTypes.Hybrid,
 
         ClientSecrets = 
         {
@@ -54,29 +56,31 @@ this allows requesting refresh tokens for long lived API access::
 Modifying the MVC client
 ^^^^^^^^^^^^^^^^^^^^^^^^
 The modifications at the MVC client are also minimal - the ASP.NET Core OpenID Connect 
-middleware has built-in support for the hybrid flow, so we only need to change some configuration values.
+handler has built-in support for the hybrid flow, so we only need to change some configuration values.
 
-We configure the ``ClientSecret`` to match the secret at IdentityServer. Add the ``offline_access`` scopes, 
-and set the ``ResponseType`` to ``code id_token`` (which basically means "use hybrid flow")
+We configure the ``ClientSecret`` to match the secret at IdentityServer. Add the ``offline_access`` and ``api1`` scopes, 
+and set the ``ResponseType`` to ``code id_token`` (which basically means "use hybrid flow").
+To keep the ``website`` claim in our mvc client identity we need to explicitly map the claim using ClaimActions.
 
 ::
 
-    app.UseOpenIdConnectAuthentication(new OpenIdConnectOptions
+    .AddOpenIdConnect("oidc", options =>
     {
-        AuthenticationScheme = "oidc",
-        SignInScheme = "Cookies",
+        options.SignInScheme = "Cookies";
 
-        Authority = "http://localhost:5000",
-        RequireHttpsMetadata = false,
+        options.Authority = "http://localhost:5000";
+        options.RequireHttpsMetadata = false;
 
-        ClientId = "mvc",
-        ClientSecret = "secret",
+        options.ClientId = "mvc";
+        options.ClientSecret = "secret";
+        options.ResponseType = "code id_token";
 
-        ResponseType = "code id_token",
-        Scope = { "api1", "offline_access" },
+        options.SaveTokens = true;
+        options.GetClaimsFromUserInfoEndpoint = true;
 
-        GetClaimsFromUserInfoEndpoint = true,
-        SaveTokens = true
+        options.Scope.Add("api1");
+        options.Scope.Add("offline_access");
+        options.ClaimActions.MapJsonKey("website", "website");
     });
 
 When you run the MVC client, there will be no big differences, besides that the consent
@@ -84,31 +88,36 @@ screen now asks you for the additional API and offline access scope.
 
 Using the access token
 ^^^^^^^^^^^^^^^^^^^^^^
-The OpenID Connect middleware saves the tokens (identity, access and refresh in our case)
+The OpenID Connect handler saves the tokens (identity, access and refresh in our case)
 automatically for you. That's what the ``SaveTokens`` setting does.
+
+The cookie inspection view iterates over those values and shows them on the screen.
 
 Technically the tokens are stored inside the properties section of the cookie. 
 The easiest way to access them is by using extension methods from the ``Microsoft.AspNetCore.Authentication`` namespace.
 
-For example on your claims view::
+For example::
 
-    <dt>access token</dt>
-    <dd>@await ViewContext.HttpContext.Authentication.GetTokenAsync("access_token")</dd>
-
-    <dt>refresh token</dt>
-    <dd>@await ViewContext.HttpContext.Authentication.GetTokenAsync("refresh_token")</dd>
+    var accessToken = await HttpContext.GetTokenAsync("access_token")
+    var refreshToken = await HttpContext.GetTokenAsync("refresh_token");
 
 For accessing the API using the access token, all you need to do is retrieve the token, 
 and set it on your *HttpClient*::
 
-    public async Task<IActionResult> CallApiUsingUserAccessToken()
+    public async Task<IActionResult> CallApi()
     {
-        var accessToken = await HttpContext.Authentication.GetTokenAsync("access_token");
+        var accessToken = await HttpContext.GetTokenAsync("access_token");
 
         var client = new HttpClient();
-        client.SetBearerToken(accessToken);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
         var content = await client.GetStringAsync("http://localhost:5001/identity");
 
         ViewBag.Json = JArray.Parse(content).ToString();
         return View("json");
     }
+
+Create a view called ``json.cshtml`` that outputs the json like this::
+
+    <pre>@ViewBag.Json</pre>
+
+Make sure the API is running, start the MVC client and call ``/home/CallApi`` after authentication.
